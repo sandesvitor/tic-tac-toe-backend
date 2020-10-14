@@ -24,16 +24,13 @@ room_data = {
 }
 
 
-@routes.get("/")
-async def index(request):
-    return web.Response(text="<h1>Server Running</h1>", content_type="text/html")
-
-
 @io.event
 async def connect(sid, environ):
 
     print("\n<<< New Socket Connected! >>>\n")
     print(f"[io.on('connect') - new socket with id [{sid}]")
+
+    global socket_status
 
     new_player = {
         "id": sid,
@@ -71,6 +68,30 @@ async def connect(sid, environ):
     await io.emit('roomData', room_data)
 
 
+@io.on("selectCell")
+def handle_selected_cell(sid, data):
+    current_player = data["currentPlayer"]
+    next_player = data["nextPlayer"]
+    cell_id = data["cellId"]
+    cell_coordinates = data["cellCoordinates"]
+
+    # TODO:
+    # 1) find player moves array and sort it:
+    # 2) Validate round results:
+
+    if room_data["isGameOver"] == True:
+        room_data["state"] = "GAME_OVER"
+        room_data["message"] = f"Game Over!\nPlayer {current_player} has won!"
+        room_data["winner"] = current_player
+    else:
+        room_data["state"] = f"PLAYER_{next_player}_TURN"
+
+    render_cell_data = {"cellToFill": cell_id, "currentPlayer": current_player}
+
+    await io.emit("roomData", room_data)
+    await io.emit("fillCell", render_cell_data)
+
+
 @io.event
 async def disconnect(sid):
     print("\n<<<Disconnecting Socket >>>\n")
@@ -94,7 +115,12 @@ async def disconnect(sid):
     await io.emit(room_data)
 
 
+@routes.get("/")
+async def index(request):
+    return web.Response(text="<h1>Server Running</h1>", content_type="text/html")
+
 app.add_routes(routes)
+
 
 if __name__ == "__main__":
     web.run_app(app, port=5000)
