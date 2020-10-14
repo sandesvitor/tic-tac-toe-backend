@@ -8,7 +8,6 @@ sio.attach(app)
 
 routes = web.RouteTableDef()
 
-
 users_dic_list = []
 
 
