@@ -27,17 +27,17 @@ room_data = {
 @io.event
 async def connect(sid, environ):
 
+    global socket_status
+
     print("\n<<< New Socket Connected! >>>\n")
     print(f"[io.on('connect') - new socket with id [{sid}]")
 
-    global socket_status
-
     new_player = {
         "id": sid,
-        "moves_matix": [
-            [],  # row 1
-            [],  # row 2
-            []  # row 3
+        "moves_matrix": [
+            [0, 1],  # row 1
+            [2, 1],  # row 2
+            [2, 0, 1]  # row 3
         ],
         "position": None
     }
@@ -75,9 +75,39 @@ def handle_selected_cell(sid, data):
     cell_id = data["cellId"]
     cell_coordinates = data["cellCoordinates"]
 
-    # TODO:
-    # 1) find player moves array and sort it:
-    # 2) Validate round results:
+    print("\n<<< Results Validation for Player [%s] >>>\n", current_player)
+    player_moves_matrix = [
+        player["moves_matrix"] for player in room_data["players"] if player["position"] == current_player
+    ][0]
+
+    # Sorting elements inside each row:
+    list(map(lambda row: row.sort(), player_moves_matrix))
+
+    print("Moves Matrix Sorted:")
+    print(player_moves_matrix)
+
+    for i in range(3):
+        # FIRST CHECK ===> check whether the player have completed any ROW:
+        if len(player_moves_matrix[i]) == 3:
+            room_data["isGameOver"] = True
+            break
+        else:
+            # SECOND CHECK ===> check for any COLUMN completion, for a fixed ROW:
+            temp_cols_array = []
+            for j in range(3):
+                temp_cols_array.append(player_moves_matrix[j][i])
+
+            print("temp_cols_array:")
+            print(temp_cols_array)
+
+            # Checking if we are getting all elements allign in the columns:
+            game_over_for_column_completed = len(temp_cols_array) == 3 and len(set(temp_cols_array)) = 1
+
+            if game_over_for_column_completed == True:
+                room_data["isGameOver"] = True
+                break
+
+    print("\n<<< End of Results Validation for Player [%s]\n", currentPlayer)
 
     if room_data["isGameOver"] == True:
         room_data["state"] = "GAME_OVER"
