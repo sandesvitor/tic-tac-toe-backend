@@ -1,6 +1,6 @@
 from aiohttp import web
 import socketio
-from itertools import zip_longest
+from resources.results import results_handler
 import json
 
 app = web.Application()
@@ -40,6 +40,7 @@ async def connect(sid, environ):
             [],  # row 2
             []  # row 3
         ],
+        "total_moves": [],
         "position": None
     }
 
@@ -82,56 +83,31 @@ async def handle_selected_cell(sid, data):
     print("Data from Client:")
     print(json.dumps(data, sort_keys=True, indent=4))
 
-    row = cell_coordinates[0]
-    column = cell_coordinates[1]
+    total_moves = [player["total_moves"]
+                   for player in room_data["players"] if player["position"] == 1][0]
 
     rows_matrix = [
         player["moves_matrix"] for player in room_data["players"] if player["position"] == current_player
     ][0]
 
+    row = cell_coordinates[0]
+    column = cell_coordinates[1]
+
     rows_matrix[row - 1].append(column)
-
-    diagonal_reference_1 = [[0, 0], [1, 1], [2, 2]]
-    diagonal_reference_2 = [[0, 2], [1, 1], [2, 0]]
-
-    diagonal_left_to_right = []
-    diagonal_right_to_left = []
-
-    if [row, column] in diagonal_reference_1:
-        diagonal_left_to_right.append([row, column])
-    elif [row, column] in diagonal_reference_2:
-        diagonal_right_to_left.append([row, column])
-
-    print(f"\n<<< Results Validation for Player [{current_player}] >>>\n")
+    total_moves.append([row, column])
 
     # Sorting elements inside each ROW:
     list(map(lambda row: row.sort(), rows_matrix))
 
-    # Transposing ROWS MATRX to COLUMN:
-    columns_matrix = [list(filter(None, i))
-                      for i in zip_longest(*rows_matrix, fillvalue=None)]
+    print(f"\n<<< Results Validation for Player [{current_player}] >>>\n")
 
-    print("Rows Matrix Sorted : " + str(rows_matrix))
-    print("Column Matrix Sorted : " + str(columns_matrix))
-
-    for i in range(len(columns_matrix)):
-        print("Iteration Number: " + str(i + 1))
-        # FIRST CHECK ===> ANY ROW FILLED:
-        if len(rows_matrix[i]) == 3:
-            room_data["isGameOver"] = True
-            break
-        # SECOND CHECK ===> ANY COLUMN FILLED:
-        elif len(columns_matrix[i]) == 3:
-            room_data["isGameOver"] = True
-            break
-        # THIRD CHECK ===> ANY DIAGONAL FILLED:
-        else:
-            if (len(diagonal_left_to_right) == 3) or (len(diagonal_right_to_left) == 3):
-                room_data["isGameOver"] = True
+    is_game_over = results_handler(rows_matrix, total_moves)
+    room_data["isGameOver"] = is_game_over
 
     print(f"\n<<< End of Results Validation for Player [{current_player}]\n")
 
     render_cell_data = {"cellToFill": cell_id, "currentPlayer": current_player}
+    room_data["cellMatrix"].append([row, column])
 
     if room_data["isGameOver"] == True:
         room_data["state"] = "GAME_OVER"
