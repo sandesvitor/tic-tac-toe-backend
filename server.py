@@ -1,5 +1,6 @@
 from aiohttp import web
 import socketio
+from itertools import zip_longest
 import json
 
 app = web.Application()
@@ -35,9 +36,9 @@ async def connect(sid, environ):
     new_player = {
         "id": sid,
         "moves_matrix": [
-            [0, 1],  # row 1
-            [2, 1],  # row 2
-            [2, 0, 1]  # row 3
+            [],  # row 1
+            [],  # row 2
+            []  # row 3
         ],
         "position": None
     }
@@ -69,57 +70,89 @@ async def connect(sid, environ):
 
 
 @io.on("selectCell")
-def handle_selected_cell(sid, data):
+async def handle_selected_cell(sid, data):
+
+    global room_data
+
     current_player = data["currentPlayer"]
     next_player = data["nextPlayer"]
     cell_id = data["cellId"]
     cell_coordinates = data["cellCoordinates"]
 
-    print("\n<<< Results Validation for Player [%s] >>>\n", current_player)
-    player_moves_matrix = [
+    print("Data from Client:")
+    print(json.dumps(data, sort_keys=True, indent=4))
+
+    row = cell_coordinates[0]
+    column = cell_coordinates[1]
+
+    rows_matrix = [
         player["moves_matrix"] for player in room_data["players"] if player["position"] == current_player
     ][0]
 
-    # Sorting elements inside each row:
-    list(map(lambda row: row.sort(), player_moves_matrix))
+    rows_matrix[row - 1].append(column)
 
-    print("Moves Matrix Sorted:")
-    print(player_moves_matrix)
+    print(f"\n<<< Results Validation for Player [{current_player}] >>>\n")
 
-    for i in range(3):
-        # FIRST CHECK ===> check whether the player have completed any ROW:
-        if len(player_moves_matrix[i]) == 3:
+    # Sorting elements inside each ROW:
+    list(map(lambda row: row.sort(), rows_matrix))
+
+    # Transposing ROWS MATRX to COLUMN:
+    columns_matrix = [list(filter(None, i))
+                      for i in zip_longest(*rows_matrix, fillvalue=None)]
+
+    print("Rows Matrix Sorted : " + str(rows_matrix))
+    print("Column Matrix Sorted : " + str(columns_matrix))
+
+    for i in range(len(columns_matrix)):
+        print("Iteration Number: " + str(i + 1))
+        # FIRST CHECK ===> ANY ROW FILLED:
+        if len(rows_matrix[i]) == 3:
             room_data["isGameOver"] = True
             break
-        else:
-            # SECOND CHECK ===> check for any COLUMN completion, for a fixed ROW:
-            temp_cols_array = []
-            for j in range(3):
-                temp_cols_array.append(player_moves_matrix[j][i])
+        # SECOND CHECK ===> ANY COLUMN FILLED:
+        elif len(columns_matrix[i]) == 3:
+            room_data["isGameOver"] = True
+            break
+        # THIRD CHECK ===> ANY DIAGONAL FILLED:
+        # else:
 
-            print("temp_cols_array:")
-            print(temp_cols_array)
+            # diagonal_left_to_right = (rows_matrix[0][0] == 0) and (
+            #     rows_matrix[1][1] == 1) and (rows_matrix[2][2] == 2)
 
-            # Checking if we are getting all elements allign in the columns:
-            game_over_for_column_completed = len(temp_cols_array) == 3 and len(set(temp_cols_array)) = 1
+            # diagonal_right_to_left = (rows_matrix[0][2] == 0) and (
+            #     rows_matrix[1][1] == 1) and (rows_matrix[2][0] == 2)
 
-            if game_over_for_column_completed == True:
-                room_data["isGameOver"] = True
-                break
+            # if (diagonal_left_to_right == True) or (diagonal_right_to_left == True):
+            #     room_data["isGameOver"] = True
 
-    print("\n<<< End of Results Validation for Player [%s]\n", currentPlayer)
+    print(f"\n<<< End of Results Validation for Player [{current_player}]\n")
+
+    render_cell_data = {"cellToFill": cell_id, "currentPlayer": current_player}
 
     if room_data["isGameOver"] == True:
         room_data["state"] = "GAME_OVER"
         room_data["message"] = f"Game Over!\nPlayer {current_player} has won!"
         room_data["winner"] = current_player
+
+        await io.emit("roomData", room_data)
+        await io.emit("fillCell", render_cell_data)
+
+        room_data = {
+            "state": "WAITING_PLAYERS",
+            "message": "",
+            "players": [],
+            "waitingRoom": [],
+            "cellMatrix": [],
+            "currentPlayer": None,
+            "nextPlayer": None,
+            "isGameOver": False,
+            "winner": None
+        }
+
     else:
         room_data["state"] = f"PLAYER_{next_player}_TURN"
-
-    render_cell_data = {"cellToFill": cell_id, "currentPlayer": current_player}
-
-    await io.emit("roomData", room_data)
-    await io.emit("fillCell", render_cell_data)
+        await io.emit("roomData", room_data)
+        await io.emit("fillCell", render_cell_data)
 
 
 @io.event
