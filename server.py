@@ -91,6 +91,17 @@ async def handle_selected_cell(sid, data):
 
     rows_matrix[row - 1].append(column)
 
+    diagonal_reference_1 = [[0, 0], [1, 1], [2, 2]]
+    diagonal_reference_2 = [[0, 2], [1, 1], [2, 0]]
+
+    diagonal_left_to_right = []
+    diagonal_right_to_left = []
+
+    if [row, column] in diagonal_reference_1:
+        diagonal_left_to_right.append([row, column])
+    elif [row, column] in diagonal_reference_2:
+        diagonal_right_to_left.append([row, column])
+
     print(f"\n<<< Results Validation for Player [{current_player}] >>>\n")
 
     # Sorting elements inside each ROW:
@@ -114,16 +125,9 @@ async def handle_selected_cell(sid, data):
             room_data["isGameOver"] = True
             break
         # THIRD CHECK ===> ANY DIAGONAL FILLED:
-        # else:
-
-            # diagonal_left_to_right = (rows_matrix[0][0] == 0) and (
-            #     rows_matrix[1][1] == 1) and (rows_matrix[2][2] == 2)
-
-            # diagonal_right_to_left = (rows_matrix[0][2] == 0) and (
-            #     rows_matrix[1][1] == 1) and (rows_matrix[2][0] == 2)
-
-            # if (diagonal_left_to_right == True) or (diagonal_right_to_left == True):
-            #     room_data["isGameOver"] = True
+        else:
+            if (len(diagonal_left_to_right) == 3) or (len(diagonal_right_to_left) == 3):
+                room_data["isGameOver"] = True
 
     print(f"\n<<< End of Results Validation for Player [{current_player}]\n")
 
