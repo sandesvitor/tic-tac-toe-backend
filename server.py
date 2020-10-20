@@ -16,7 +16,7 @@ socket_status = -1
 async def connect(sid, environ):
     global socket_status
 
-    print(f"[io.on('connect') - new socket with id [{sid}]")
+    print(f"[io.on('connect') - new socket [{sid}]")
 
     socket_status = Room.add_player_to_room(sid)
 
@@ -34,7 +34,7 @@ async def handle_selected_cell(sid, data):
 
 @io.event
 async def disconnect(sid):
-    print(f"[io.on('disconnect') - socket disconnected [{sid}]")
+    print(f"[io.on('disconnect') - socket [{sid}] disconnected ")
 
     Room.remove_user_from_list(sid, socket_status)
     await io.emit(Room.get_room_data())
