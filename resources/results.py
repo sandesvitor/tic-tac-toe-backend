@@ -1,4 +1,5 @@
 from itertools import zip_longest
+import json
 
 
 def results_handler(r_matrix,  m_matrix):
@@ -34,8 +35,11 @@ def results_handler(r_matrix,  m_matrix):
     return False
 
 
+def parseJSON(dictionary):
+    return json.dumps(dictionary, sort_keys=True, indent=4,
+                      ensure_ascii=False)
+
+
 # TESTS >>>
 if __name__ == "__main__":
-    rMatrix = [[1, 2], [1, 3], [3]]
-    mMatriz = [[1, 1], [2, 2], [2, 1], [2, 3], [3, 3]]
-    print(results_handler(rMatrix, mMatriz))
+    print("Run your Tests here:\n")

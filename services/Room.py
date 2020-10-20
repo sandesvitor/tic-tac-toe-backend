@@ -1,5 +1,5 @@
 from models.User import User
-from resources.results import results_handler
+from resources.results import results_handler, parseJSON
 import json
 
 room_data = {
@@ -115,12 +115,12 @@ class Room():
         else:
             room_data["state"] = f"PLAYER_{next_player}_TURN"
 
-        return render_cell_data
+        return parseJSON(render_cell_data)
 
     @staticmethod
     def get_room_data():
         global room_data
-        return room_data
+        return parseJSON(room_data)
 
     @staticmethod
     def remove_user_from_list(sid, socket_status):
